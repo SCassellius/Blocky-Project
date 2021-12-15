@@ -15,7 +15,6 @@ import random
 import math
 from renderer import COLOUR_LIST, TEMPTING_TURQUOISE, BLACK, colour_name
 
-
 HIGHLIGHT_COLOUR = TEMPTING_TURQUOISE
 FRAME_COLOUR = BLACK
 
@@ -84,6 +83,16 @@ class Block:
         and max_depth) to 0.  (All attributes can be updated later, as
         appropriate.)
         """
+
+        self.position = (0, 0)
+        self.size = 0
+        self.colour = colour
+        self.level = level
+        self.max_depth = 0
+        self.highlighted = False
+        self.children = []
+        self.parent = None
+
         pass
 
     def rectangles_to_draw(self) -> List[Tuple[Tuple[int, int, int],
@@ -116,6 +125,25 @@ class Block:
 
         The order of the rectangles does not matter.
         """
+
+        rectangles = [(FRAME_COLOUR, (self.position[0] - 3, self.position[1] - 3), (self.size, self.size),
+                       False), ]
+
+        if self.children is None:
+            rectangles.append((self.colour, self.position, (self.size, self.size), True))
+            if self.highlighted:
+                rectangles.append((HIGHLIGHT_COLOUR, (self.position[0] - 5, self.position[1] - 5),
+                                   (self.size, self.size), True))
+        else:
+            for child in self.children:
+                rectangles.append((FRAME_COLOUR, child.position - 3, (child.size, child.size), False))
+                rectangles.append((child.color, child.position, (child.size, child.size), True))
+                if child.highlighted:
+                    rectangles.append((HIGHLIGHT_COLOUR, (child.position[0] - 5, child.position[1] - 5),
+                                       (child.size, child.size), True))
+
+        return rectangles
+
         pass
 
     def swap(self, direction: int) -> None:
@@ -160,6 +188,19 @@ class Block:
         <top_left> is the (x, y) coordinates of the top left corner of
         this Block.  <size> is the height and width of this Block.
         """
+
+        self.position = top_left
+        self.size = size
+
+        if self.children is True:
+            block_number = 1
+            new_size = size // 4
+            new_positions = [(new_size, 0), (0, 0), (0, new_size), (new_size, new_size)]
+            for block in self.children:
+                block.size = new_size
+                block.position = new_positions[block_number]
+                block_number += 1
+
         pass
 
     def get_selected_block(self, location: Tuple[int, int], level: int) \
@@ -208,7 +249,28 @@ def random_init(level: int, max_depth: int) -> 'Block':
     Precondition:
         level <= max_depth
     """
-    pass
+
+    def make_block(is_a_child: bool, needs_children: bool) -> Block:
+
+        children_list = \
+            [make_block(True, False), make_block(True, False), make_block(True, False), make_block(True, False)] \
+            if needs_children else None
+
+        return Block(
+                    level + 1 if is_a_child else level,
+                    None if needs_children else COLOUR_LIST[int(random.randint(0, 4))],
+                    None if is_a_child else children_list
+                )
+
+    if level < max_depth:
+        if random.randrange(0, 1) < math.exp(-0.25 * level):
+            return make_block(False, True)
+    else:
+        return make_block(False, False)
+
+"    return (make_block(True) if random(0, 1) < math.exp(-0.25 * level) else make_block(False)) \
+        if level < max_depth else \
+        make_block(False)"
 
 
 def attributes_str(b: Block, verbose) -> str:
@@ -254,6 +316,7 @@ def print_block_indented(b: Block, indent: int, verbose) -> None:
         print(f'{"  " * indent}{attributes_str(b, verbose)}')
         for child in b.children:
             print_block_indented(child, indent + 1, verbose)
+
 
 if __name__ == '__main__':
     # import python_ta
